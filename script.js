@@ -82,7 +82,7 @@ function generateGIF() {
             workers: 2,
             quality: 10,
             repeat: 0,
-            workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
+            workerScript: './gif/gif.worker.js',
         });
 
         const backgroundColor = document.getElementById('backgroundInput').value;

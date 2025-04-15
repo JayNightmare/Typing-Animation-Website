@@ -29,7 +29,7 @@ function createTypingAnimation(text) {
                 setTimeout(type, parseFloat(speedInput.value) * 1000); // Adjusted typing speed
             } else if (backspaceInput.checked) {
                 isDeleting = true;
-                setTimeout(type, parseFloat(pauseDurationInput.value) * 1000);
+                setTimeout(type, parseFloat(pauseDurationInput.value) * 1000); // Pause before backspacing
             } else {
                 finishTyping();
             }
@@ -67,11 +67,11 @@ function generateGIF() {
     return new Promise((resolve) => {
         const gif = new GIF({
             workers: 2,
-            quality: 10,
+            quality: 20,
             repeat: 0,
             workerScript: './gif/gif.worker.js',
-            width: 320, // Reduced resolution
-            height: 180, // Reduced resolution
+            width: 320,
+            height: 180,
         });
 
         const backgroundColor = document.getElementById('backgroundInput').value;
@@ -82,12 +82,16 @@ function generateGIF() {
         const text = textInput.value;
         const font = fontFamilyInput.value;
         const delay = parseFloat(speedInput.value) * 1000; // Use user-defined speed for delay
+        const pauseDuration = parseFloat(pauseDurationInput.value) * 1000; // Pause duration in milliseconds
 
         canvas.width = 320; // Fixed width for optimization
         canvas.height = 180; // Fixed height for optimization
 
+        const frameRate = Math.min(10, 1000 / delay); // Cap frame rate at 10fps
+        const frameInterval = Math.ceil(1000 / frameRate);
+
         // Draw typing frames
-        for (let i = 1; i <= text.length; i++) {
+        for (let i = 1; i <= text.length; i += frameInterval) {
             context.clearRect(0, 0, canvas.width, canvas.height);
             context.fillStyle = backgroundColor;
             context.fillRect(0, 0, canvas.width, canvas.height);
@@ -107,9 +111,21 @@ function generateGIF() {
             gif.addFrame(frameCanvas, { copy: true, delay });
         }
 
-        // Draw backspace frames if enabled
+        // Add pause frames if backspace is enabled
         if (backspaceInput.checked) {
-            for (let i = text.length; i > 0; i--) {
+            const pauseFrames = Math.ceil(pauseDuration / delay);
+            for (let i = 0; i < pauseFrames; i++) {
+                const frameCanvas = document.createElement('canvas');
+                frameCanvas.width = canvas.width;
+                frameCanvas.height = canvas.height;
+                const frameCtx = frameCanvas.getContext('2d');
+                frameCtx.drawImage(canvas, 0, 0);
+
+                gif.addFrame(frameCanvas, { copy: true, delay });
+            }
+
+            // Draw backspace frames
+            for (let i = text.length; i > 0; i -= frameInterval) {
                 context.clearRect(0, 0, canvas.width, canvas.height);
                 context.fillStyle = backgroundColor;
                 context.fillRect(0, 0, canvas.width, canvas.height);
@@ -137,7 +153,7 @@ function generateGIF() {
         });
 
         gif.on('abort', () => console.log('GIF generation aborted.'));
-        gif.on('error', (err) => console.error('GIF generation failed:', err));
+        gif.on('error', err => console.error('GIF generation failed:', err));
 
         gif.render();
     });

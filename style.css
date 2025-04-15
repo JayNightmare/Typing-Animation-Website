@@ -45,7 +45,7 @@ label {
     margin-bottom: 5px;
 }
 
-button {
+button, a {
     background-color: #4caf50;
     color: #ffffff;
     border: none;
@@ -59,12 +59,12 @@ button {
     margin-top: 20px;
 }
 
-button:disabled {
+button:disabled, a:disabled {
     background-color: #555555;
     cursor: not-allowed;
 }
 
-button:hover:not(:disabled) {
+button:hover:not(:disabled), a:hover:not(:disabled) {
     background-color: #388e3c;
     transform: scale(1.05);
 }
@@ -113,7 +113,7 @@ input[type="checkbox"] {
     margin-right: 10px;
 }
 
-.fontColorInput {
+.colorInput {
     padding: 0 !important;
 }
 

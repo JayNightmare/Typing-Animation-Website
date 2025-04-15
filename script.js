@@ -9,12 +9,14 @@ const backspaceInput = document.getElementById('backspaceInput');
 const pauseDurationInput = document.getElementById('pauseDurationInput');
 
 let gif;
+let generatedGIFUrl = null;
 
-// Updated to use seconds instead of milliseconds
+// Updated to apply the selected font family
 function createTypingAnimation(text) {
     animationDiv.innerHTML = '';
     animationDiv.style.fontSize = `${fontSizeInput.value}px`;
     animationDiv.style.color = fontColorInput.value;
+    animationDiv.style.fontFamily = fontFamilyInput.value;
 
     let index = 0;
     let isDeleting = false;
@@ -29,7 +31,7 @@ function createTypingAnimation(text) {
                 isDeleting = true;
                 setTimeout(type, parseFloat(pauseDurationInput.value) * 1000);
             } else {
-                downloadButton.disabled = false;
+                finishTyping();
             }
         } else {
             if (index > 0) {
@@ -38,53 +40,132 @@ function createTypingAnimation(text) {
                 setTimeout(type, parseFloat(speedInput.value) * 1000);
             } else {
                 isDeleting = false;
-                downloadButton.disabled = false;
+                finishTyping();
             }
         }
     };
 
     type();
+
+    async function finishTyping() {
+        downloadButton.style.display = 'inline-block';
+        downloadButton.textContent = 'Generating GIF...';
+        downloadButton.style.pointerEvents = 'none';
+    
+        generatedGIFUrl = await generateGIF();
+    
+        downloadButton.href = generatedGIFUrl;
+        downloadButton.download = 'typing-animation.gif';
+        downloadButton.textContent = 'Download as GIF';
+        downloadButton.style.pointerEvents = 'auto';
+    }
+    
 }
 
-// Function to generate GIF
+// async function finishTyping() {
+//     downloadButton.style.display = 'inline-block';
+//     downloadButton.textContent = 'Generating GIF...';
+//     downloadButton.style.pointerEvents = 'none';
+
+//     generatedGIFUrl = await generateGIF();
+
+//     downloadButton.href = generatedGIFUrl;
+//     downloadButton.download = 'typing-animation.gif';
+//     downloadButton.textContent = 'Download as GIF';
+//     downloadButton.style.pointerEvents = 'auto';
+// }
+
+// Updated to include background color and padding for the GIF
 function generateGIF() {
-    const gif = new GIF({
-        workers: 2,
-        quality: 10,
-        repeat: 0 // Loop the GIF infinitely
-    });
+    return new Promise((resolve) => {
+        const gif = new GIF({
+            workers: 2,
+            quality: 10,
+            repeat: 0,
+            workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
+        });
 
-    const frames = animationDiv.textContent.split('').map((char, i) => {
-        const frame = document.createElement('div');
-        frame.textContent = animationDiv.textContent.slice(0, i + 1);
-        frame.style.fontSize = `${fontSizeInput.value}px`;
-        frame.style.color = fontColorInput.value;
-        frame.style.textAlign = 'center';
-        frame.style.margin = '20px 0';
-        return frame;
-    });
+        const backgroundColor = document.getElementById('backgroundInput').value;
+        const padding = parseInt(document.getElementById('paddingInput').value);
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        const fontSize = parseInt(fontSizeInput.value);
+        const text = textInput.value;
+        const font = fontFamilyInput.value;
+        const delay = parseFloat(speedInput.value) * 1000;
 
-    frames.forEach(frame => {
-        gif.addFrame(frame, { delay: parseInt(speedInput.value) });
-    });
+        canvas.width = animationDiv.offsetWidth + padding * 2;
+        canvas.height = fontSize + padding * 2;
 
-    gif.on('finished', function(blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'typing-animation.gif';
-        a.click();
-    });
+        const frames = [];
 
-    gif.render();
+        // Draw all frames to individual canvases
+        for (let i = 1; i <= text.length; i++) {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = backgroundColor;
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            context.font = `${fontSize}px ${font}`;
+            context.fillStyle = fontColorInput.value;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text.slice(0, i), canvas.width / 2, canvas.height / 2);
+
+            // Clone canvas data into an ImageData frame
+            const frameCanvas = document.createElement('canvas');
+            frameCanvas.width = canvas.width;
+            frameCanvas.height = canvas.height;
+            const frameCtx = frameCanvas.getContext('2d');
+            frameCtx.drawImage(canvas, 0, 0);
+
+            gif.addFrame(frameCanvas, {copy: true, delay});
+        }
+
+        gif.on('finished', (blob) => {
+            console.log('GIF generated successfully.');
+            const url = URL.createObjectURL(blob);
+            resolve(url);
+        });
+
+        gif.on('abort', () => console.log('GIF generation aborted.'));
+        gif.on('error', err => console.error('GIF generation failed:', err));
+
+        gif.render();
+    });
 }
 
-// Event listeners
+function downloadGIF(blobUrl) {
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = 'typing-animation.gif';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    // Cleanup after a brief delay to avoid race condition
+    setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+    }, 1000);
+}
+
 generateButton.addEventListener('click', () => {
     const text = textInput.value;
     if (text) {
+        // Clear previous GIF if exists
+        if (generatedGIFUrl) {
+            URL.revokeObjectURL(generatedGIFUrl);
+            generatedGIFUrl = null;
+            downloadButton.style.display = 'none';
+        }
+
         createTypingAnimation(text);
     }
 });
 
-downloadButton.addEventListener('click', generateGIF);
+downloadButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (generatedGIFUrl) {
+        console.log('Downloading GIF:', generatedGIFUrl);
+        downloadGIF(generatedGIFUrl);
+    }
+});

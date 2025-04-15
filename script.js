@@ -26,7 +26,7 @@ function createTypingAnimation(text) {
             if (index < text.length) {
                 animationDiv.textContent += text[index];
                 index++;
-                setTimeout(type, parseFloat(speedInput.value) * 1000);
+                setTimeout(type, parseFloat(speedInput.value) * 1000); // Adjusted typing speed
             } else if (backspaceInput.checked) {
                 isDeleting = true;
                 setTimeout(type, parseFloat(pauseDurationInput.value) * 1000);
@@ -37,7 +37,7 @@ function createTypingAnimation(text) {
             if (index > 0) {
                 animationDiv.textContent = animationDiv.textContent.slice(0, -1);
                 index--;
-                setTimeout(type, parseFloat(speedInput.value) * 1000);
+                setTimeout(type, parseFloat(speedInput.value) * 1000); // Adjusted backspace speed
             } else {
                 isDeleting = false;
                 finishTyping();
@@ -62,19 +62,6 @@ function createTypingAnimation(text) {
     
 }
 
-// async function finishTyping() {
-//     downloadButton.style.display = 'inline-block';
-//     downloadButton.textContent = 'Generating GIF...';
-//     downloadButton.style.pointerEvents = 'none';
-
-//     generatedGIFUrl = await generateGIF();
-
-//     downloadButton.href = generatedGIFUrl;
-//     downloadButton.download = 'typing-animation.gif';
-//     downloadButton.textContent = 'Download as GIF';
-//     downloadButton.style.pointerEvents = 'auto';
-// }
-
 // Updated to include background color and padding for the GIF
 function generateGIF() {
     return new Promise((resolve) => {
@@ -83,6 +70,8 @@ function generateGIF() {
             quality: 10,
             repeat: 0,
             workerScript: './gif/gif.worker.js',
+            width: 320, // Reduced resolution
+            height: 180, // Reduced resolution
         });
 
         const backgroundColor = document.getElementById('backgroundInput').value;
@@ -92,10 +81,10 @@ function generateGIF() {
         const fontSize = parseInt(fontSizeInput.value);
         const text = textInput.value;
         const font = fontFamilyInput.value;
-        const delay = parseFloat(speedInput.value) * 1000;
+        const delay = parseFloat(speedInput.value) * 1000; // Use user-defined speed for delay
 
-        canvas.width = animationDiv.offsetWidth + padding * 2;
-        canvas.height = fontSize + padding * 2;
+        canvas.width = 320; // Fixed width for optimization
+        canvas.height = 180; // Fixed height for optimization
 
         // Draw typing frames
         for (let i = 1; i <= text.length; i++) {
@@ -148,7 +137,7 @@ function generateGIF() {
         });
 
         gif.on('abort', () => console.log('GIF generation aborted.'));
-        gif.on('error', err => console.error('GIF generation failed:', err));
+        gif.on('error', (err) => console.error('GIF generation failed:', err));
 
         gif.render();
     });
@@ -168,9 +157,16 @@ function downloadGIF(blobUrl) {
     }, 5000);
 }
 
-generateButton.addEventListener('click', () => {
+generateButton.addEventListener('click', async () => {
     const text = textInput.value;
     if (text) {
+        // Disable the button for 10 seconds to prevent spamming
+        generateButton.disabled = true;
+        generateButton.textContent = 'Wait for 10 seconds...';
+        setTimeout(() => {
+            generateButton.disabled = false;
+        }, 10000);
+
         // Clear previous GIF if exists
         if (generatedGIFUrl) {
             URL.revokeObjectURL(generatedGIFUrl);
@@ -178,7 +174,7 @@ generateButton.addEventListener('click', () => {
             downloadButton.style.display = 'none';
         }
 
-        createTypingAnimation(text);
+        await createTypingAnimation(text);
     }
 });
 

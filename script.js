@@ -165,6 +165,7 @@ generateButton.addEventListener('click', async () => {
         generateButton.textContent = 'Wait for 10 seconds...';
         setTimeout(() => {
             generateButton.disabled = false;
+            generateButton.textContent = 'Generate GIF';
         }, 10000);
 
         // Clear previous GIF if exists

@@ -97,9 +97,7 @@ function generateGIF() {
         canvas.width = animationDiv.offsetWidth + padding * 2;
         canvas.height = fontSize + padding * 2;
 
-        const frames = [];
-
-        // Draw all frames to individual canvases
+        // Draw typing frames
         for (let i = 1; i <= text.length; i++) {
             context.clearRect(0, 0, canvas.width, canvas.height);
             context.fillStyle = backgroundColor;
@@ -111,14 +109,36 @@ function generateGIF() {
             context.textBaseline = 'middle';
             context.fillText(text.slice(0, i), canvas.width / 2, canvas.height / 2);
 
-            // Clone canvas data into an ImageData frame
             const frameCanvas = document.createElement('canvas');
             frameCanvas.width = canvas.width;
             frameCanvas.height = canvas.height;
             const frameCtx = frameCanvas.getContext('2d');
             frameCtx.drawImage(canvas, 0, 0);
 
-            gif.addFrame(frameCanvas, {copy: true, delay});
+            gif.addFrame(frameCanvas, { copy: true, delay });
+        }
+
+        // Draw backspace frames if enabled
+        if (backspaceInput.checked) {
+            for (let i = text.length; i > 0; i--) {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.fillStyle = backgroundColor;
+                context.fillRect(0, 0, canvas.width, canvas.height);
+
+                context.font = `${fontSize}px ${font}`;
+                context.fillStyle = fontColorInput.value;
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText(text.slice(0, i - 1), canvas.width / 2, canvas.height / 2);
+
+                const frameCanvas = document.createElement('canvas');
+                frameCanvas.width = canvas.width;
+                frameCanvas.height = canvas.height;
+                const frameCtx = frameCanvas.getContext('2d');
+                frameCtx.drawImage(canvas, 0, 0);
+
+                gif.addFrame(frameCanvas, { copy: true, delay });
+            }
         }
 
         gif.on('finished', (blob) => {
@@ -145,7 +165,7 @@ function downloadGIF(blobUrl) {
     // Cleanup after a brief delay to avoid race condition
     setTimeout(() => {
         URL.revokeObjectURL(blobUrl);
-    }, 1000);
+    }, 5000);
 }
 
 generateButton.addEventListener('click', () => {
